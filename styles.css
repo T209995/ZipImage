@@ -1,6 +1,6 @@
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    width: 320px;
+    width: 350px; /* J'ai élargi un peu la fenêtre pour accueillir les images */
     background-color: #f8fafc;
     padding: 16px;
     margin: 0;
@@ -91,19 +91,24 @@ button:disabled {
 }
 
 #image-list-container {
-    max-height: 300px;
+    max-height: 350px;
     overflow-y: auto;
     border: 1px solid #cbd5e0;
     border-radius: 6px;
     background-color: white;
-    padding: 8px;
+    padding: 0; /* Padding géré par les éléments enfants */
 }
 
 .image-wrapper {
     display: flex;
     align-items: center;
-    padding: 6px;
+    padding: 8px;
     border-bottom: 1px solid #f1f5f9;
+    transition: background-color 0.1s;
+}
+
+.image-wrapper:hover {
+    background-color: #f8fafc;
 }
 
 .image-wrapper:last-child {
@@ -116,6 +121,19 @@ button:disabled {
     height: 16px;
     accent-color: #3b82f6;
     cursor: pointer;
+    flex-shrink: 0; /* Empêche la checkbox de rétrécir */
+}
+
+/* NOUVEAU : Style pour la prévisualisation */
+.image-preview {
+    width: 48px;
+    height: 48px;
+    object-fit: cover; /* Recadre l'image sans la déformer */
+    border-radius: 4px;
+    margin-right: 12px;
+    border: 1px solid #e2e8f0;
+    background-color: #f1f5f9;
+    flex-shrink: 0; /* Empêche l'image de rétrécir */
 }
 
 .image-wrapper label {
@@ -126,6 +144,7 @@ button:disabled {
     text-overflow: ellipsis;
     cursor: pointer;
     flex: 1;
+    line-height: 1.5;
 }
 
 #download-selected-button {

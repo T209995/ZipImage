@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fr: {
             appName: "ZipImage",
             msgStart: "Cliquez pour lister les images.",
-            btnExtract: "🔍 Lister",
+            btnExtract: "🔍 Recherche",
             btnSelectAll: "Tout cocher",
             btnUnselectAll: "Tout décocher",
             btnDownload: "💾 Télécharger ZIP",
@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         en: {
             appName: "ZipImage",
             msgStart: "Click to list images.",
-            btnExtract: "🔍 Scan Page",
+            btnExtract: "🔍 Scan",
             btnSelectAll: "Select All",
             btnUnselectAll: "Unselect All",
             btnDownload: "💾 Download ZIP",
@@ -126,6 +126,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     Array.from(images).forEach(img => {
                         if (img.src) urls.push(img.src);
                     });
+                    // On récupère aussi les images de fond si possible (optionnel)
+                    // mais restons simple pour l'instant
                     return [...new Set(urls)];
                 }
             });
@@ -150,14 +152,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 checkbox.className = 'image-checkbox';
                 checkbox.value = url;
                 checkbox.checked = true;
+
+                // --- NOUVEAU : Prévisualisation de l'image ---
+                const imgPreview = document.createElement('img');
+                imgPreview.src = url;
+                imgPreview.className = 'image-preview';
+                imgPreview.alt = 'Preview';
+                // Gestion simple des erreurs de chargement d'image
+                imgPreview.onerror = () => {
+                    imgPreview.style.display = 'none'; // Cache l'image si elle ne charge pas
+                };
                 
                 const label = document.createElement('label');
                 label.htmlFor = `image-${index}`;
-                label.textContent = url.length > 50 ? url.substring(0, 47) + '...' : url;
+                // On raccourcit le texte car l'image prend de la place
+                const filename = url.substring(url.lastIndexOf('/') + 1);
+                label.textContent = filename.length > 30 ? filename.substring(0, 27) + '...' : filename;
                 label.title = url;
 
                 wrapper.appendChild(checkbox);
+                wrapper.appendChild(imgPreview); // Ajout de l'image au DOM
                 wrapper.appendChild(label);
+                
+                // Permet de cocher la case en cliquant sur l'image aussi
+                imgPreview.addEventListener('click', () => {
+                    checkbox.checked = !checkbox.checked;
+                    updateSelectAllButton();
+                });
+
                 imageListContainer.appendChild(wrapper);
             });
 
@@ -171,11 +193,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Fonction helper pour mettre à jour le bouton "Tout cocher"
+    function updateSelectAllButton() {
+        const checkboxes = document.querySelectorAll('.image-checkbox');
+        const allChecked = Array.from(checkboxes).every(c => c.checked);
+        selectAllButton.textContent = allChecked ? t('btnUnselectAll') : t('btnSelectAll');
+    }
+
+    // Ajout d'un écouteur global pour mettre à jour le bouton SelectAll quand on clique sur une checkbox
+    imageListContainer.addEventListener('change', (e) => {
+        if (e.target.classList.contains('image-checkbox')) {
+            updateSelectAllButton();
+        }
+    });
+
     selectAllButton.addEventListener('click', () => {
         const checkboxes = document.querySelectorAll('.image-checkbox');
-        const allChecked = Array.from(checkboxes).every(checkbox => checkbox.checked);
-        checkboxes.forEach(checkbox => checkbox.checked = !allChecked);
-        selectAllButton.textContent = allChecked ? t('btnSelectAll') : t('btnUnselectAll');
+        // Vérifie si TOUT est coché pour décider d'inverser ou de tout cocher
+        const allAlreadyChecked = Array.from(checkboxes).every(checkbox => checkbox.checked);
+        
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = !allAlreadyChecked;
+        });
+        
+        updateSelectAllButton();
     });
 
     downloadSelectedButton.addEventListener('click', async () => {
@@ -218,15 +259,31 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const result of results) {
                 if (result.status === 'success') {
                     successCount++;
+                    // Tentative d'extraire un nom de fichier propre
                     let filename = result.url.substring(result.url.lastIndexOf('/') + 1).split('?')[0].split('#')[0];
-                    if (!filename || filename.length < 4 || !filename.includes('.')) {
+                    
+                    // Nettoyage des caractères invalides pour un nom de fichier
+                    filename = filename.replace(/[/\\?%*:|"<>]/g, '-');
+
+                    if (!filename || filename.length < 2 || !filename.includes('.')) {
                         const ext = result.mimeType.split('/')[1] || 'jpg';
                         filename = `image-${Date.now()}-${successCount}.${ext}`;
                     }
-                    if (zip.file(filename)) {
-                        filename = `copy-${Date.now()}-${filename}`;
+                    
+                    // Gestion des doublons de noms dans le ZIP
+                    let finalFilename = filename;
+                    let counter = 1;
+                    while(zip.file(finalFilename)) {
+                        const dotIndex = filename.lastIndexOf('.');
+                        if(dotIndex !== -1) {
+                            finalFilename = filename.substring(0, dotIndex) + `(${counter})` + filename.substring(dotIndex);
+                        } else {
+                            finalFilename = filename + `(${counter})`;
+                        }
+                        counter++;
                     }
-                    zip.file(filename, result.blob);
+                    
+                    zip.file(finalFilename, result.blob);
                 } else {
                     failCount++;
                 }

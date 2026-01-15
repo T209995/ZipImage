@@ -2,7 +2,7 @@
 "manifest_version": 3,
 "name": "ZipImage - Extracteur d'images",
 "version": "1.1",
-"description": "Extrait toutes les images de la page web actuelle et les télécharge le tout dans un fichier ZIP.",
+"description": "Extrait toutes les images de la page web actuelle et télécharge le tout dans un fichier ZIP.",
 "permissions": [
 "activeTab",
 "scripting",
